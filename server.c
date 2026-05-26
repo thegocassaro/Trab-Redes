@@ -28,6 +28,8 @@ typedef struct {
 #define STATE_PAUSED  0
 #define STATE_STOPPED -1
 
+char file_name[250] = "My Chemical Romance - Im Not Okay I Promise audio.wav";
+
 void *handle_client(void *arg) {
     client_data_t *cli_data = (client_data_t *)arg;
     int sock = cli_data->client_socket;
@@ -38,13 +40,16 @@ void *handle_client(void *arg) {
            inet_ntoa(cli_data->client_addr.sin_addr), 
            ntohs(cli_data->client_addr.sin_port));
 
+           
     // 1. Abertura do arquivo de áudio
     SF_INFO sfinfo;
-    SNDFILE *infile = sf_open("audio_teste.wav", SFM_READ, &sfinfo);
+    SNDFILE *infile = sf_open(file_name, SFM_READ, &sfinfo);
     
     if (!infile) {
-        printf("Erro ao abrir o arquivo: %s\n", sf_strerror(NULL));
-        // tratar erro e fechar thread...
+        printf("Erro ao abrir o arquivo '%s': %s\n", file_name, sf_strerror(NULL));
+        close(sock);
+        free(cli_data);
+        pthread_exit(NULL);
     }
 
     printf("Iniciando streaming: %d Hz, %d canais\n", sfinfo.samplerate, sfinfo.channels);
@@ -85,7 +90,7 @@ void *handle_client(void *arg) {
             double time_in_seconds = (double)read_frames / sfinfo.samplerate;
             
             // Convertendo para microsegundos para a função usleep
-            usleep((useconds_t)(time_in_seconds * 1000000.0));
+            usleep((unsigned int)(time_in_seconds * 1000000.0));
 
         } else if (state == STATE_PAUSED) {
             // 3. Thread em pausa: leitura BLOQUEANTE (economia de CPU)
@@ -128,7 +133,7 @@ int main() {
     }
 
     // Configura opções para reuso de porta
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
         perror("Erro no setsockopt");
         exit(EXIT_FAILURE);
     }
@@ -181,8 +186,4 @@ int main() {
 
 /*
 gcc server.c -o server -lpthread -lsndfile
-
-(wsl)
-sudo apt-get update
-sudo apt-get install libsndfile1-dev 
 */
