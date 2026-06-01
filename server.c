@@ -209,10 +209,3 @@ int main() {
     close(server_fd);
     return 0;
 }
-
-/*
-gcc server.c -o server -lpthread -lsndfile
-
-no segundo terminal, após prover a porta:
-nc localhost 8080
-*/
