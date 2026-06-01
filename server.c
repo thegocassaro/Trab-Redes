@@ -63,7 +63,32 @@ void *handle_client(void *arg) {
     while (state != STATE_STOPPED) {
         
         if (state == STATE_PLAYING) {
-            // ... (AQUI VAI A LÓGICA DO RECV COM MSG_DONTWAIT QUE FIZEMOS ANTES) ...
+            // 1. Tenta ler um comando sem bloquear a thread (MSG_DONTWAIT)
+            ssize_t n = recv(sock, cmd_buffer, sizeof(cmd_buffer) - 1, MSG_DONTWAIT);
+            
+            if (n > 0) {
+                cmd_buffer[n] = '\0'; // Garante terminação da string
+                
+                // Remove quebras de linha caso o cliente envie via Telnet/Netcat
+                cmd_buffer[strcspn(cmd_buffer, "\r\n")] = 0; 
+
+                if (strcmp(cmd_buffer, "PAUSE") == 0) {
+                    printf("Comando recebido: PAUSE\n");
+                    state = STATE_PAUSED;
+                    continue; // Pula o envio de áudio e vai para a próxima iteração
+                } else if (strcmp(cmd_buffer, "STOP") == 0) {
+                    printf("Comando recebido: STOP\n");
+                    state = STATE_STOPPED;
+                    continue;
+                }
+            } else if (n == 0) {
+                printf("Cliente desconectou.\n");
+                break;
+            } else if (n < 0 && (errno != EAGAIN && errno != EWOULDBLOCK)) {
+                // Se deu um erro real (diferente de "não tem dados agora")
+                perror("Erro na leitura do socket");
+                break;
+            }
 
             // 2. Lendo um bloco (chunk) de áudio
             // sf_readf_short lê por *frames*, garantindo que os canais fiquem alinhados.
@@ -115,6 +140,7 @@ void *handle_client(void *arg) {
     }
 
     printf("Encerrando conexão com cliente.\n");
+    sf_close(infile);
     close(sock);
     free(cli_data);
     pthread_exit(NULL);
@@ -186,4 +212,7 @@ int main() {
 
 /*
 gcc server.c -o server -lpthread -lsndfile
+
+no segundo terminal, após prover a porta:
+nc localhost 8080
 */
