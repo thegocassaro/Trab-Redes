@@ -1,6 +1,15 @@
-Para compilar o servidor, use:
-    gcc server.c -o server -lpthread -lsndfile
+# Multiplexador de Áudio em Tempo Real (UDP)
 
-No segundo terminal, após rodar o servidor e prover a porta:
-    nc localhost 8080
-    pode usar comandos PLAY, PAUSE e STOP
+Projeto desenvolvido para a disciplina de Redes de Computadores. 
+
+## Objetivo
+Desenvolver um servidor capaz de receber áudio de múltiplos clientes simultaneamente via sockets UDP, processar a mixagem (juntar os áudios) em tempo real, retransmitir o resultado para os participantes e gravar a sessão. O desenvolvimento seguirá a evolução em fases (Comunicação, Escalabilidade e Observabilidade).
+
+## Arquitetura
+- **Topologia:** Cliente-Servidor (Estrela)
+- **Protocolo de Transporte:** UDP (priorizando tempo real sobre garantia de entrega)
+- **Servidor:** [A definir - Sugestão: Go]
+- **Cliente:** [A definir - Sugestão: Python]
+
+## Como rodar o projeto
+*(Instruções de execução serão adicionadas nas próximas fases)*
