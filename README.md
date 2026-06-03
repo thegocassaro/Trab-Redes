@@ -1,19 +1,19 @@
-# Multiplexador de Áudio em Tempo Real (UDP)
+# Multiplexador de Áudio
 
 Projeto desenvolvido para a disciplina de Redes de Computadores. 
 
 ## Objetivo
-Desenvolver um servidor capaz de receber áudio de múltiplos clientes simultaneamente via sockets UDP, processar a mixagem (juntar os áudios) em tempo real, retransmitir o resultado para os participantes e gravar a sessão. O desenvolvimento seguirá a evolução em fases (Comunicação, Escalabilidade e Observabilidade).
+Desenvolver um servidor capaz de receber fluxos de áudio de múltiplos clientes simultaneamente, processar a mixagem (juntar os áudios) em tempo real, retransmitir o resultado para os participantes e gravar a sessão continuamente no servidor. 
 
-## Arquitetura
-- **Topologia:** Cliente-Servidor (Estrela)
-- **Protocolo de Transporte:** UDP (priorizando tempo real sobre garantia de entrega)
-- **Servidor:** [A definir - Sugestão: Go]
-- **Cliente:** [A definir - Sugestão: Python]
+O desenvolvimento segue uma evolução gradual, abordando comunicação via sockets, sincronização, escalabilidade e métricas.
+
+## Arquitetura 
+- **Topologia:** Cliente-Servidor (Estrela). O servidor atua como um nó central (Mixer) responsável por receber, sincronizar e agrupar as faixas de áudio.
+- **Protocolo de Transporte:** Sockets TCP (via **WebSockets**). 
+  - *Justificativa:* Para viabilizar testes dinâmicos usando os navegadores dos celulares no laboratório, optamos por uma interface Web. Como navegadores bloqueiam sockets UDP arbitrários por segurança, adotamos WebSockets, que operam sobre TCP, fornecendo uma conexão bidirecional persistente ideal para streaming web.
+- **Backend (Servidor):** Go (Golang) - Escolhido pela alta eficiência em concorrência (`goroutines`) necessária para mixar múltiplos buffers de áudio em tempo real.
+- **Frontend (Cliente):** Angular (TypeScript) - Interface web para capturar o microfone via `Web Audio API` e transmitir os dados de forma contínua.
 
 ## Como rodar o projeto
-- **Dependências do cliente em python**
-´´´
-    sudo apt update
-    sudo apt install portaudio19-dev python3-pyaudio
-´´´
+- **Dependências do Servidor em GO**
+Link do site oficial: [https://go.dev/dl/]

@@ -2,19 +2,27 @@
 # .gitignore - Projeto Mixer de Áudio
 # ========================
 
-# Arquivos de Sistema Operacional (Windows/Mac/Linux)
+# Arquivos de Sistema Operacional
 .DS_Store
 Thumbs.db
 *~
 
-# Python (Cliente)
+# Frontend 
+node_modules/
+dist/
+.angular/
+.npm/
+coverage/
+*.log
+
+# Python 
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
 .env
 
-# Go (Servidor)
+# Go 
 /bin/
 *.exe
 *.test
