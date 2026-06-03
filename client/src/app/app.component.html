@@ -1,10 +1,51 @@
 <main>
-  <h1>Mixer de Áudio Web</h1>
+  <h1>KARAOKE</h1>
   
-  <div class="controls">
-    <button (click)="startStreaming()">Iniciar Transmissão</button>
-    <button (click)="stopStreaming()">Parar Transmissão</button>
+  <div class="search-area">
+    <input 
+      type="text" 
+      placeholder="Buscar música, artista ou álbum..."
+      #campoBusca 
+      (input)="aoDigitar(campoBusca.value)"
+    >
+
+    <ul class="resultados">
+      @for (musica of musicasFiltradas; track musica) {
+        <li (click)="selecionarMusica(musica, campoBusca)">🎵 {{ musica }}</li>
+      }
+    </ul>
+    <button (click)="startStreaming()">
+      Cantar esta música
+    </button>
   </div>
 
-  <p>Status: <span>Aguardando...</span></p>
+  <div class="cadastro-area">
+    <h2>Microfones</h2>
+    
+    <div class="cadastro-grupo">
+      <input 
+        type="text" 
+        placeholder="Nome do participante..." 
+        #campoNick
+        [disabled]="jaCadastrado"
+      >
+      <button 
+        class="btn-add" 
+        (click)="adicionarParticipante(campoNick.value, campoNick)"
+        [disabled]="jaCadastrado"
+      >+</button>
+    </div>
+
+    @if (participantes.length > 0) {
+      <div class="lista-tags">
+        @for (player of participantes; track player) {
+          <span class="tag-player">
+            <span>👤 {{ player }}</span>
+            <button class="btn-remove" (click)="removerParticipante(player)">✕</button>
+          </span>
+        }
+      </div>
+    }
+  </div>
+  
 </main>

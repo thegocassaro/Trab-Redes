@@ -22,7 +22,6 @@ typedef struct {
     struct sockaddr_in client_addr;
 } client_data_t;
 
-
 // Estados de reprodução
 #define STATE_PLAYING 1
 #define STATE_PAUSED  0

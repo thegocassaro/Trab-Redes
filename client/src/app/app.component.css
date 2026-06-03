@@ -1,0 +1,186 @@
+/* --- ESTILO DA TELA PRINCIPAL --- */
+main {
+  background-color: #0f0c1b;
+  color: #f1ecff;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  padding: 40px 30px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: -10px;
+  gap: 45px; /* Aumenta a separação entre a busca e o cadastro */
+}
+
+/* --- TÍTULO DO SISTEMA --- */
+h1 {
+  color: #00f3ff;
+  font-size: 3rem;
+  margin: 0;
+  letter-spacing: 2px;
+  font-weight: 1000;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+/* --- ÁREA DE BUSCA --- */
+.search-area {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 450px;
+  width: 100%;
+}
+
+/* --- CAMPO DE DIGITAÇÃO --- */
+input {
+  background-color: #272144;
+  border: 2px solid #1d1833;
+  border-radius: 8px;
+  color: #f1ecff;
+  padding: 14px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input:focus {
+  border-color: #00f3ff;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.2);
+}
+
+/* --- LISTA DE RESULTADOS --- */
+.resultados {
+  background-color: #1d1833;
+  border-radius: 8px;
+  list-style: none;
+  padding: 0;
+  margin: -6px 0 0 0;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+.resultados li {
+  padding: 12px 15px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
+}
+
+.resultados li:hover {
+  background-color: #a124ff;
+}
+
+/* --- BOTÃO ROXO DE CANTAR --- */
+button {
+  background: linear-gradient(90deg, #a124ff, #bd68ff);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.2s ease;
+  box-shadow: 0 4px 15px rgba(161, 36, 255, 0.3);
+  width: 100%;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* --- SEÇÃO DE CADASTRO DO PARTICIPANTE --- */
+.cadastro-area {
+  max-width: 450px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 2px solid #1d1833; /* Linha sutil de divisão */
+  padding-top: 35px;
+}
+
+.cadastro-area h2 {
+  font-size: 1.1rem;
+  color: #8c82b3;
+  margin: 0;
+}
+
+/* Agrupa o input e o botão de mais lado a lado */
+.cadastro-grupo {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Estilização específica para o botão de mais (+) */
+.cadastro-grupo .btn-add {
+  width: 55px;
+  padding: 0;
+  font-size: 1.6rem;
+  background: #272144;
+  border: 2px solid #1d1833;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cadastro-grupo .btn-add:hover {
+  background: #00f3ff;
+  color: #0f0c1b;
+  border-color: #00f3ff;
+}
+
+/* Container das tags dos usuários inseridos */
+.lista-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.tag-player {
+  background-color: #1d1833;
+  border: 1px solid #a124ff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+/* NOVO: Estilo específico do botão de remover (✕) interno */
+.btn-remove {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  color: #ff3860; /* Vermelho suave */
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  width: auto;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-remove:hover {
+  color: #ff6b8b;
+  transform: scale(1.2);
+  opacity: 1;
+}
+
+input:disabled,
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #1d1833;
+  box-shadow: none;
+  background: #171426;
+  color: #61598c;
+}

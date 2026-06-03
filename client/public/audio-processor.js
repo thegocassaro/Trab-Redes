@@ -23,12 +23,14 @@ class MyAudioProcessor extends AudioWorkletProcessor {
 
     // 2. REPRODUÇÃO: Se houver áudio na fila para tocar e uma saída disponível
     if (output && output.length > 0 && this.playbackQueue.length > 0) {
-      const outputChannel = output[0];
-      const nextBuffer = this.playbackQueue.shift(); // Pega o bloco de áudio mais antigo
+      const nextBuffer = this.playbackQueue.shift();
       
-      // Copia os dados recebidos da rede direto para os alto-falantes
-      for (let i = 0; i < outputChannel.length; i++) {
-        outputChannel[i] = nextBuffer[i] || 0;
+      // Percorre todos os canais físicos de saída (geralmente 2: 0=Esquerdo, 1=Direito)
+      for (let channel = 0; channel < output.length; channel++) {
+        const outputChannel = output[channel];
+        for (let i = 0; i < outputChannel.length; i++) {
+          outputChannel[i] = nextBuffer[i] || 0;
+        }
       }
     }
 
