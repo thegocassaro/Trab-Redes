@@ -12,4 +12,8 @@ Desenvolver um servidor capaz de receber áudio de múltiplos clientes simultane
 - **Cliente:** [A definir - Sugestão: Python]
 
 ## Como rodar o projeto
-*(Instruções de execução serão adicionadas nas próximas fases)*
+- **Dependências do cliente em python**
+´´´
+    sudo apt update
+    sudo apt install portaudio19-dev python3-pyaudio
+´´´
