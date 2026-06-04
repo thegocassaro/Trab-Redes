@@ -1,4 +1,4 @@
-# Multiplexador de Áudio
+# Karaokê
 
 Projeto desenvolvido para a disciplina de Redes de Computadores. 
 
@@ -15,5 +15,21 @@ O desenvolvimento segue uma evolução gradual, abordando comunicação via sock
 - **Frontend (Cliente):** Angular (TypeScript) - Interface web para capturar o microfone via `Web Audio API` e transmitir os dados de forma contínua.
 
 ## Como rodar o projeto
-- **Dependências do Servidor em GO**
-Link do site oficial: [https://go.dev/dl/]
+- **Servidor backend**
+```
+  cd server
+  go run main.go
+```
+- **Aplicacao Web / Frontend**
+```
+cd client
+ng serve --host 00.00.00.0
+```
+- **Permissão do navegador do celular**
+```
+chrome://flags
+insecure origins treated as secure
+http://00.00.00.0:4200
+Ativado
+```
+// Nos dois tópicos acima 00.00.00.0 é o IP da conexão de rede atual do computador que os servidores foram abertos. 
