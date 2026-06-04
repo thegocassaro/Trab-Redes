@@ -18,6 +18,9 @@ export class AppComponent implements OnInit, OnDestroy {
   volumeVoz: number = 1.0;    
   audioPlayer: HTMLAudioElement = new Audio();
 
+  resultadoReconhecimento: any = null;
+  estaReconhecendo: boolean = false;
+
   constructor(private audioService: AudioService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
@@ -49,6 +52,27 @@ export class AppComponent implements OnInit, OnDestroy {
       
       this.cdr.detectChanges();
     };
+  }
+
+  async buscarMusicaShazam() {
+    this.estaReconhecendo = true;
+    this.resultadoReconhecimento = null; // Limpa busca anterior
+
+    try {
+      const resposta = await this.audioService.reconhecerMusica();
+      
+      // A API da AudD retorna "status: 'success'" e os dados no "result"
+      if (resposta && resposta.status === 'success' && resposta.result) {
+        this.resultadoReconhecimento = resposta.result;
+        console.log("Música encontrada:", this.resultadoReconhecimento.title);
+      } else {
+        alert("Não foi possível identificar a música. Tente novamente.");
+      }
+    } catch (erro) {
+      alert("Erro ao conectar com o servidor.");
+    } finally {
+      this.estaReconhecendo = false;
+    }
   }
 
   async definirComoResultado() {

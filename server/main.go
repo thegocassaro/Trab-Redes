@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"sync"
 
@@ -94,6 +97,74 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			manager.mu.Unlock()
 		}
 	}
+}
+
+// Novo Endpoint para Reconhecimento de Música (Módulo Shazam)
+func handleRecognize(w http.ResponseWriter, r *http.Request) {
+	// Configuração básica de CORS para permitir que o Angular (localhost:4200) acesse
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Preflight request do navegador
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 1. Recebe o arquivo do Angular (limite de 10 MB)
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, "Erro ao processar formulário", http.StatusBadRequest)
+		return
+	}
+
+	file, handler, err := r.FormFile("audio")
+	if err != nil {
+		http.Error(w, "Erro ao extrair arquivo de áudio", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// 2. Prepara o formulário multipart para a AudD
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// COLOQUE SEU TOKEN AQUI
+	_ = writer.WriteField("api_token", "7cf3d41000b3234a3cf4200d1cd0875f") 
+
+	part, err := writer.CreateFormFile("file", handler.Filename)
+	if err != nil {
+		http.Error(w, "Erro ao criar arquivo para envio", http.StatusInternalServerError)
+		return
+	}
+	io.Copy(part, file)
+	writer.Close()
+
+	// 3. Faz a requisição para a AudD.io
+	req, err := http.NewRequest("POST", "https://api.audd.io/", body)
+	if err != nil {
+		http.Error(w, "Erro ao criar requisição para a API", http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, "Erro na comunicação com AudD", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// 4. Repassa o JSON da AudD diretamente para o Angular
+	w.Header().Set("Content-Type", "application/json")
+	io.Copy(w, resp.Body)
 }
 
 func main() {

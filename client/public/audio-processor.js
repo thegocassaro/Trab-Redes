@@ -1,13 +1,19 @@
-// public/audio-processor.js
-
 class MyAudioProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.playbackQueue = []; // Fila para guardar o áudio que precisamos tocar
+    // Em vez de uma fila de arrays, vamos manter um buffer linear (array simples)
+    this.audioBuffer = []; 
+    this.isPlaying = false;
+    
+    // Tamanho mínimo do buffer antes de começar a tocar (Jitter Buffer).
+    // Para 48000Hz, 4096 amostras representam ~85ms de atraso. Aumente se a rede for instável.
+    this.MIN_BUFFER_SIZE = 4096; 
 
-    // Escuta quando o Angular (thread principal) envia áudio vindo do servidor
     this.port.onmessage = (event) => {
-      this.playbackQueue.push(event.data);
+      // event.data é o Float32Array vindo do servidor
+      for (let i = 0; i < event.data.length; i++) {
+        this.audioBuffer.push(event.data[i]);
+      }
     };
   }
 
@@ -15,21 +21,31 @@ class MyAudioProcessor extends AudioWorkletProcessor {
     const input = inputs[0];
     const output = outputs[0];
 
-    // 1. CAPTURA: Se o microfone enviou dados, repassa para o Angular enviar para a rede
+    // 1. CAPTURA
     if (input && input.length > 0 && input[0].length > 0) {
-      const channelData = input[0];
+      // Faz uma cópia rápida do canal para enviar
+      const channelData = new Float32Array(input[0]);
       this.port.postMessage(channelData);
     }
 
-    // 2. REPRODUÇÃO: Se houver áudio na fila para tocar e uma saída disponível
-    if (output && output.length > 0 && this.playbackQueue.length > 0) {
-      const nextBuffer = this.playbackQueue.shift();
-      
-      // Percorre todos os canais físicos de saída (geralmente 2: 0=Esquerdo, 1=Direito)
-      for (let channel = 0; channel < output.length; channel++) {
-        const outputChannel = output[channel];
-        for (let i = 0; i < outputChannel.length; i++) {
-          outputChannel[i] = nextBuffer[i] || 0;
+    // 2. CONTROLE DO JITTER BUFFER
+    // Só começa a tocar quando tivermos dados suficientes acumulados
+    if (!this.isPlaying && this.audioBuffer.length >= this.MIN_BUFFER_SIZE) {
+      this.isPlaying = true;
+    } else if (this.isPlaying && this.audioBuffer.length === 0) {
+      // Se a rede travar muito e esvaziar tudo, para e espera acumular de novo
+      this.isPlaying = false; 
+    }
+
+    // 3. REPRODUÇÃO
+    for (let channel = 0; channel < output.length; channel++) {
+      const outputChannel = output[channel];
+      for (let i = 0; i < outputChannel.length; i++) {
+        if (this.isPlaying && this.audioBuffer.length > 0) {
+          // Remove a primeira amostra do buffer e toca (para otimizar depois, use RingBuffer)
+          outputChannel[i] = this.audioBuffer.shift(); 
+        } else {
+          outputChannel[i] = 0; // Silêncio se não estiver tocando
         }
       }
     }
@@ -37,5 +53,4 @@ class MyAudioProcessor extends AudioWorkletProcessor {
     return true; 
   }
 }
-
 registerProcessor('audio-processor', MyAudioProcessor);
