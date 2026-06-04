@@ -1,51 +1,79 @@
 <main>
   <h1>KARAOKE</h1>
   
-  <div class="search-area">
-    <input 
-      type="text" 
-      placeholder="Buscar música, artista ou álbum..."
-      #campoBusca 
-      (input)="aoDigitar(campoBusca.value)"
-    >
-
-    <ul class="resultados">
-      @for (musica of musicasFiltradas; track musica) {
-        <li (click)="selecionarMusica(musica, campoBusca)">🎵 {{ musica }}</li>
-      }
-    </ul>
-    <button (click)="startStreaming()">
-      Cantar esta música
-    </button>
-  </div>
-
-  <div class="cadastro-area">
-    <h2>Microfones</h2>
-    
-    <div class="cadastro-grupo">
-      <input 
-        type="text" 
-        placeholder="Nome do participante..." 
-        #campoNick
-        [disabled]="jaCadastrado"
-      >
-      <button 
-        class="btn-add" 
-        (click)="adicionarParticipante(campoNick.value, campoNick)"
-        [disabled]="jaCadastrado"
-      >+</button>
+  @if (papel === 'NENHUM') {
+    <div class="search-area" style="text-align: center;">
+      
+      <button style="background: #0088cc; margin-bottom: 10px;" (click)="definirComoResultado()">
+        Caixas de Som
+      </button>
+      
+      <button (click)="definirComoMicrofone()">
+        Microfone
+      </button>
     </div>
+  }
 
-    @if (participantes.length > 0) {
-      <div class="lista-tags">
-        @for (player of participantes; track player) {
-          <span class="tag-player">
-            <span>👤 {{ player }}</span>
-            <button class="btn-remove" (click)="removerParticipante(player)">✕</button>
-          </span>
+  @if (papel === 'RESULTADO') {
+    <div class="karaoke-tela">
+      <div class="info-musica" style="border-bottom: 1px solid #272144; padding-bottom: 20px;">
+        <h3>Mixer e Resultado</h3>
+        @if (estadoSala === 'AGUARDANDO') {
+          <p>Aguardando algum participante escolher a música no celular...</p>
+        } @else {
+          <p style="color: #00f3ff;">Tocando a música: {{ musicaSelecionada }}</p>
+          <p>Recebendo e reproduzindo vozes da rede.</p>
+        }
+      </div>
+
+      <div class="mesa-som">
+        <div class="slider-group">
+          <label>Volume do Instrumental: {{ (volumeMusica * 100).toFixed(0) }}%</label>
+          <input type="range" min="0" max="1" step="0.01" [value]="volumeMusica" (input)="mudarVolumeMusica($event)">
+        </div>
+
+        <div class="slider-group">
+          <label>Volume dos Microfones da Rede: {{ (volumeVoz * 100).toFixed(0) }}%</label>
+          <input type="range" min="0" max="2" step="0.05" [value]="volumeVoz" (input)="mudarVolumeVoz($event)">
+        </div>
+      </div>
+      
+      <button style="background: #ff3860; margin-top: 10px;" (click)="voltarInicio()">Fechar Mixer</button>
+    </div>
+  }
+
+  @if (papel === 'MICROFONE') {
+    
+    @if (estadoSala === 'AGUARDANDO') {
+      <div class="search-area">
+        <p>1. Escolha a música</p>
+        <input type="text" placeholder="Buscar música..." #campoBusca (input)="aoDigitar(campoBusca.value)">
+        <ul class="resultados">
+          @for (musica of musicasFiltradas; track musica) {
+            <li (click)="selecionarMusica(musica, campoBusca)">{{ musica }}</li>
+          }
+        </ul>
+        
+        <p style="margin-top: 15px;">2. Digite seu nome</p>
+        <input type="text" placeholder="Nome do participante..." #campoNick>
+        
+        <button style="margin-top: 15px;" (click)="iniciarMusica(campoNick.value)">Iniciar Sessão</button>
+      </div>
+    } @else {
+      <div class="karaoke-tela" style="text-align: center;">
+        <h3>Música Ativa: {{ musicaSelecionada }}</h3>
+        
+        @if (nomeParticipante) {
+          <p style="color: #00f3ff; font-size: 1.2rem; margin: 20px 0;">Microfone aberto: {{ nomeParticipante }}</p>
+          <button style="background: #ff3860; margin-top: 30px;" (click)="pararMusica()">Parar Apresentação</button>
+        } @else {
+          <p>A música está tocando. Junte-se para cantar junto!</p>
+          <input type="text" placeholder="Seu nome..." #campoNickSecundario style="margin: 20px 0;">
+          <button (click)="juntarSeAMusicaExistente(campoNickSecundario.value)">Entrar como Microfone</button>
         }
       </div>
     }
-  </div>
-  
+    
+    <button class="btn-voltar" style="background: transparent; border: 1px solid #8c82b3; color: #8c82b3; margin-top: 20px;" (click)="voltarInicio()">Sair do Microfone</button>
+  }
 </main>

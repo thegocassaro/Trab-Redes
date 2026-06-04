@@ -184,3 +184,57 @@ button:disabled {
   background: #171426;
   color: #61598c;
 }
+
+/* ESTILO DOS CONTROLES DE VOLUME (MESA DE SOM) */
+.mesa-som {
+  background-color: #1d1833;
+  border-radius: 12px;
+  padding: 25px;
+  width: 100%;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.slider-group label {
+  color: #00f3ff;
+  font-size: 0.95rem;
+  font-weight: bold;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  background: #0f0c1b;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  padding: 0;
+  border: 1px solid #272144;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #a124ff;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(161, 36, 255, 0.8);
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
