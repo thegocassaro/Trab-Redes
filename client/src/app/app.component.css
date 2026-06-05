@@ -238,3 +238,67 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
 }
+
+/* --- MÓDULO SHAZAM --- */
+.shazam-area {
+  margin-top: 35px;
+  border-top: 2px solid #1d1833;
+  padding-top: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.shazam-area h3 {
+  font-size: 1.1rem;
+  color: #8c82b3;
+  margin: 0 0 5px 0;
+}
+
+.btn-shazam {
+  background: linear-gradient(90deg, #ff8a00, #e52e71);
+  box-shadow: 0 4px 15px rgba(229, 46, 113, 0.3);
+}
+
+.btn-shazam:disabled {
+  background: #272144;
+  color: #00f3ff;
+  border: 1px solid #00f3ff;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+  animation: gravandoPulse 1.5s infinite;
+}
+
+.resultado-card {
+  background-color: #1d1833;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 10px;
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  border: 1px solid #272144;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.resultado-card h4 {
+  color: #00f3ff;
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+}
+
+.resultado-card p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  color: #f1ecff;
+}
+
+@keyframes gravandoPulse {
+  0% { opacity: 0.7; transform: scale(0.99); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.7; transform: scale(0.99); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

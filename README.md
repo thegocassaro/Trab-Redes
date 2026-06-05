@@ -24,6 +24,10 @@ O desenvolvimento segue uma evolução gradual, abordando comunicação via sock
 ```
 cd client
 ng serve --host 00.00.00.0
+
+WSL2:
+cd client
+ng serve --host 00.00.00.0 --disable-host-check --proxy-config proxy.conf.json
 ```
 - **Permissão do navegador do celular**
 ```
@@ -32,4 +36,6 @@ insecure origins treated as secure
 http://00.00.00.0:4200
 Ativado
 ```
-// Nos dois tópicos acima 00.00.00.0 é o IP da conexão de rede atual do computador que os servidores foram abertos. 
+// Nos dois tópicos acima 00.00.00.0 é o IP da conexão de rede atual do computador que os servidores foram abertos.
+
+// Caso esteja usando WSL2, em um novo terminal usar: `npx localtunnel --port 4200 --local-host 127.0.0.1` a fim de criar uma url de acesso pelo dispositivo cliente.

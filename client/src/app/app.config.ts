@@ -1,11 +1,8 @@
 import { ApplicationConfig } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http'; // Adicione este import
-import { routes } from './app.routes';
+import { provideHttpClient } from '@angular/common/http';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
-    provideHttpClient() // Fornece o cliente HTTP
+    provideHttpClient() // Fornece o cliente HTTP necessário para a API AudD
   ]
 };

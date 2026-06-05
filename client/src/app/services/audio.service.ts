@@ -22,8 +22,12 @@ export class AudioService {
         resolve();
         return;
       }
-      const servidorIP = window.location.hostname;
-      this.ws = new WebSocket(`ws://${servidorIP}:8080/ws`);
+      
+      // NOVO: Detecta se é HTTP ou HTTPS automaticamente
+      const protocoloWs = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host; // Pega o domínio do túnel
+      
+      this.ws = new WebSocket(`${protocoloWs}//${host}/ws`);
       this.ws.binaryType = 'arraybuffer';
       
       this.ws.onopen = () => resolve();
@@ -183,10 +187,9 @@ export class AudioService {
           const formData = new FormData();
           formData.append('audio', audioBlob, 'amostra.webm');
 
-          const servidorIP = window.location.hostname;
-          const url = `http://${servidorIP}:8080/api/recognize`;
+          // Usa caminho relativo. O Angular Proxy se encarrega de jogar para o Go!
+          const url = `/api/recognize`;
 
-          // Envia para o Go
           this.http.post(url, formData).subscribe({
             next: (resultadoDaAudd) => resolve(resultadoDaAudd),
             error: (erro) => reject(erro)
@@ -201,7 +204,7 @@ export class AudioService {
         setTimeout(() => {
           console.log("Fim da gravação. Enviando para análise...");
           mediaRecorder.stop();
-        }, 5000); 
+        }, 10000); 
 
       } catch (e) {
         console.error("Microfone bloqueado ou erro na gravação:", e);

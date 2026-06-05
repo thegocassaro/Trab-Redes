@@ -11,6 +11,30 @@
       <button (click)="definirComoMicrofone()">
         Microfone
       </button>
+
+      <div class="shazam-area">
+        <h3>Descobrir Música</h3>
+        
+        <button 
+          (click)="buscarMusicaShazam()" 
+          [disabled]="estaReconhecendo"
+          class="btn-shazam">
+          {{ estaReconhecendo ? 'Gravando e Analisando (10s)...' : 'Identificar Música no Ambiente' }}
+        </button>
+
+        @if (resultadoReconhecimento) {
+          <div class="resultado-card">
+            <h4>Música Encontrada!</h4>
+            <p><strong> Título:</strong> {{ resultadoReconhecimento.title }}</p>
+            <p><strong> Artista:</strong> {{ resultadoReconhecimento.artist }}</p>
+            <p><strong> Álbum:</strong> {{ resultadoReconhecimento.album }}</p>
+            
+            @if (resultadoReconhecimento.release_date) {
+              <p><strong> Lançamento:</strong> {{ resultadoReconhecimento.release_date }}</p>
+            }
+          </div>
+        }
+      </div>
     </div>
   }
 
@@ -77,29 +101,3 @@
     <button class="btn-voltar" style="background: transparent; border: 1px solid #8c82b3; color: #8c82b3; margin-top: 20px;" (click)="voltarInicio()">Sair do Microfone</button>
   }
 </main>
-
-
-<!-- 
-  <div class="shazam-module">
-  <h2>Identificar Música no Ambiente</h2>
-  
-  <button 
-    (click)="buscarMusicaShazam()" 
-    [disabled]="estaReconhecendo"
-    class="btn-shazam">
-    {{ estaReconhecendo ? 'Gravando e Analisando (5s)...' : 'Identificar Música' }}
-  </button>
-
-  <div *ngIf="resultadoReconhecimento" class="resultado-card">
-    <h3>Música Encontrada!</h3>
-    <p><strong>🎵 Título:</strong> {{ resultadoReconhecimento.title }}</p>
-    <p><strong>🎤 Artista:</strong> {{ resultadoReconhecimento.artist }}</p>
-    <p><strong>💿 Álbum:</strong> {{ resultadoReconhecimento.album }}</p>
-    
-    <p *ngIf="resultadoReconhecimento.release_date">
-      <strong>📅 Lançamento:</strong> {{ resultadoReconhecimento.release_date }}
-    </p>
-  </div>
-</div>
-*/
--->

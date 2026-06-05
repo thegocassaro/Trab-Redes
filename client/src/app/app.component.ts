@@ -68,8 +68,10 @@ export class AppComponent implements OnInit, OnDestroy {
       } else {
         alert("Não foi possível identificar a música. Tente novamente.");
       }
-    } catch (erro) {
-      alert("Erro ao conectar com o servidor.");
+    } catch (erro: any) {
+      // Pega os detalhes técnicos do erro para nós debugarmos
+      const detalhes = erro.message || erro.statusText || JSON.stringify(erro);
+      alert("Erro detalhado: " + detalhes);
     } finally {
       this.estaReconhecendo = false;
     }
