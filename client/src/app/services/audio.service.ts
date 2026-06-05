@@ -161,53 +161,38 @@ export class AudioService {
   reconhecerMusica(): Promise<any> {
     return new Promise(async (resolve, reject) => {
       try {
-        // Pede permissão e pega o microfone
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // MediaRecorder é feito para gravar arquivos (diferente do Worklet que é tempo real)
         const mediaRecorder = new MediaRecorder(stream);
         const audioChunks: Blob[] = [];
 
-        // Acumula os pedaços de áudio gravados
         mediaRecorder.addEventListener("dataavailable", event => {
           if (event.data.size > 0) {
             audioChunks.push(event.data);
           }
         });
 
-        // Quando parar de gravar, junta os pedaços e envia
         mediaRecorder.addEventListener("stop", () => {
-          // Cria o arquivo final
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); 
-          
-          // Desliga o microfone (libera o hardware)
           stream.getTracks().forEach(track => track.stop());
 
-          // Monta o formulário de envio
           const formData = new FormData();
           formData.append('audio', audioBlob, 'amostra.webm');
 
-          // Usa caminho relativo. O Angular Proxy se encarrega de jogar para o Go!
           const url = `/api/recognize`;
-
           this.http.post(url, formData).subscribe({
-            next: (resultadoDaAudd) => resolve(resultadoDaAudd),
+            next: (resultado) => resolve(resultado),
             error: (erro) => reject(erro)
           });
         });
 
-        // Inicia a gravação
         mediaRecorder.start();
-        console.log("Gravando áudio para reconhecimento...");
 
-        // Define o tempo que ele vai ficar "ouvindo" a música antes de enviar (5 segundos)
+        // 10 segundos de gravação para garantir precisão
         setTimeout(() => {
-          console.log("Fim da gravação. Enviando para análise...");
           mediaRecorder.stop();
         }, 10000); 
 
       } catch (e) {
-        console.error("Microfone bloqueado ou erro na gravação:", e);
         reject(e);
       }
     });

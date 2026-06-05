@@ -56,22 +56,18 @@ export class AppComponent implements OnInit, OnDestroy {
 
   async buscarMusicaShazam() {
     this.estaReconhecendo = true;
-    this.resultadoReconhecimento = null; // Limpa busca anterior
+    this.resultadoReconhecimento = null;
 
     try {
       const resposta = await this.audioService.reconhecerMusica();
       
-      // A API da AudD retorna "status: 'success'" e os dados no "result"
       if (resposta && resposta.status === 'success' && resposta.result) {
         this.resultadoReconhecimento = resposta.result;
-        console.log("Música encontrada:", this.resultadoReconhecimento.title);
       } else {
-        alert("Não foi possível identificar a música. Tente novamente.");
+        alert("Não foi possível identificar a música. Tente chegar mais perto do microfone ou aumente o volume.");
       }
-    } catch (erro: any) {
-      // Pega os detalhes técnicos do erro para nós debugarmos
-      const detalhes = erro.message || erro.statusText || JSON.stringify(erro);
-      alert("Erro detalhado: " + detalhes);
+    } catch (erro) {
+      alert("Erro ao conectar com o servidor para identificação.");
     } finally {
       this.estaReconhecendo = false;
     }

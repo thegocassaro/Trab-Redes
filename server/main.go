@@ -101,8 +101,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 // Novo Endpoint para Reconhecimento de Música (Módulo Shazam)
 func handleRecognize(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("\n--- INICIANDO RECONHECIMENTO DE ÁUDIO ---")
-	
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -112,47 +110,36 @@ func handleRecognize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Recebe o arquivo
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
-		fmt.Println("[ERRO FATAL 1] Falha ao processar formulário:", err)
-		http.Error(w, "Erro", 500)
+		http.Error(w, "Erro ao processar formulário", http.StatusBadRequest)
 		return
 	}
 
 	file, handler, err := r.FormFile("audio")
 	if err != nil {
-		fmt.Println("[ERRO FATAL 2] Falha ao extrair arquivo 'audio':", err)
-		http.Error(w, "Erro", 500)
+		http.Error(w, "Erro ao extrair arquivo de áudio", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
-	
-	fmt.Printf("-> Arquivo recebido do Angular: %s (Tamanho: %d bytes)\n", handler.Filename, handler.Size)
 
-	// 2. Prepara envio para a AudD
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// ATENÇÃO: Verifique se o seu token real está aqui!
+	// Token ativo
 	_ = writer.WriteField("api_token", "7cf3d41000b3234a3cf4200d1cd0875f") 
 
 	part, err := writer.CreateFormFile("file", handler.Filename)
 	if err != nil {
-		fmt.Println("[ERRO FATAL 3] Falha ao criar form multipart interno:", err)
-		http.Error(w, "Erro", 500)
+		http.Error(w, "Erro interno ao montar formulário", http.StatusInternalServerError)
 		return
 	}
 	io.Copy(part, file)
 	writer.Close()
 
-	fmt.Println("-> Enviando arquivo para a API da AudD.io...")
-
-	// 3. Requisita a AudD
 	req, err := http.NewRequest("POST", "https://api.audd.io/", body)
 	if err != nil {
-		fmt.Println("[ERRO FATAL 4] Falha ao criar requisição HTTP para a internet:", err)
-		http.Error(w, "Erro", 500)
+		http.Error(w, "Erro ao criar requisição HTTP", http.StatusInternalServerError)
 		return
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -160,27 +147,14 @@ func handleRecognize(w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("[ERRO FATAL 5] Falha na conexão com a AudD:", err)
-		http.Error(w, "Erro", 500)
+		http.Error(w, "Falha na comunicação com a API externa", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
 
-	// LER O CORPO DA RESPOSTA (O JSON DA AUDD)
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("[ERRO] Não foi possível ler a resposta da AudD")
-		http.Error(w, "Erro", 500)
-		return
-	}
-
-	// IMPRIMIR O QUE A AUDD RESPONDEU
-	fmt.Println("-> Resposta RAW da AudD:", string(bodyBytes))
-
-	// 4. Devolve pro Angular
+	// Repassa a resposta diretamente para o Angular
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(bodyBytes) // Repassa os bytes lidos para o Angular
-	fmt.Println("--- RECONHECIMENTO FINALIZADO ---")
+	io.Copy(w, resp.Body)
 }
 
 func main() {
