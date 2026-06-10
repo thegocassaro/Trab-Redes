@@ -12,8 +12,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Upgrade de Transporte: Eleva a requisição HTTP inicial para um túnel TCP persistente bidirecional
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool { return true }, // Contorna políticas estritas de CORS para desenvolvimento
 }
 
 type ComandoJSON struct {
@@ -22,9 +23,10 @@ type ComandoJSON struct {
 	Tocando bool   `json:"tocando"`
 }
 
+// Gerenciador de Estado Concorrente: Estrutura base para gerenciar múltiplos clientes simultâneos
 type ClientManager struct {
 	clients       map[*websocket.Conn]bool
-	mu            sync.Mutex
+	mu            sync.Mutex // Prevenção de Race Conditions durante leitura/escrita no mapa
 	musicaTocando bool
 	musicaAtual   string
 }
@@ -36,7 +38,8 @@ var manager = ClientManager{
 func (cm *ClientManager) Register(conn *websocket.Conn) {
 	cm.mu.Lock()
 	cm.clients[conn] = true
-	// Se ja tem musica rolando, avisa o novato para ele entrar direto como microfone ativo
+
+	// Sincronização de Estado (Late Joiners): Atualiza o cliente recém-conectado sobre o status atual da sala
 	if cm.musicaTocando {
 		estado := ComandoJSON{Tipo: "SALA_ESTADO", Musica: cm.musicaAtual, Tocando: true}
 		conn.WriteJSON(estado)
@@ -51,6 +54,7 @@ func (cm *ClientManager) Unregister(conn *websocket.Conn) {
 }
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+	// Handshake: Executa a transição do protocolo HTTP para o WebSocket
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
@@ -60,12 +64,14 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	manager.Register(ws)
 	defer manager.Unregister(ws)
 
+	// Event Loop: Mantém a Goroutine escutando os pacotes deste cliente específico
 	for {
 		messageType, payload, err := ws.ReadMessage()
 		if err != nil {
 			break
 		}
 
+		// Roteamento de Controle (Metadados): Processa comandos JSON de Play/Stop
 		if messageType == websocket.TextMessage {
 			var comando ComandoJSON
 			if err := json.Unmarshal(payload, &comando); err == nil {
@@ -78,7 +84,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 					manager.musicaAtual = ""
 				}
 
-				// Repassa o comando para todos saberem o que esta acontecendo
+				// Sincronização em Massa: Dispara o novo estado para toda a rede conectada
 				for client := range manager.clients {
 					client.WriteJSON(comando)
 				}
@@ -86,10 +92,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// Relay de Streaming (Voz): Roteador central de áudio de baixíssima latência
 		if messageType == websocket.BinaryMessage {
-			// Repassa o audio binario para todos (a aba de Resultado vai reproduzir)
 			manager.mu.Lock()
 			for client := range manager.clients {
+				// Broadcast Seletivo: Repassa o buffer TCP para todos, exceto a origem (evita loop de eco)
 				if client != ws {
 					client.WriteMessage(websocket.BinaryMessage, payload)
 				}
@@ -99,7 +106,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Novo Endpoint para Reconhecimento de Música (Módulo Shazam)
+// Paradigma Transacional (Proxy Reverso): Rota HTTP REST para o módulo de Detecção Musical
 func handleRecognize(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -126,8 +133,8 @@ func handleRecognize(w http.ResponseWriter, r *http.Request) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// Token ativo
-	_ = writer.WriteField("api_token", "7cf3d41000b3234a3cf4200d1cd0875f") 
+	// Segurança de Infraestrutura: Injeta a chave secreta da API no backend, isolando do frontend Angular
+	_ = writer.WriteField("api_token", "7cf3d41000b3234a3cf4200d1cd0875f")
 
 	part, err := writer.CreateFormFile("file", handler.Filename)
 	if err != nil {
@@ -137,6 +144,7 @@ func handleRecognize(w http.ResponseWriter, r *http.Request) {
 	io.Copy(part, file)
 	writer.Close()
 
+	// Delegação em Nuvem: Encaminha o arquivo empacotado via POST para a API externa (AudD)
 	req, err := http.NewRequest("POST", "https://api.audd.io/", body)
 	if err != nil {
 		http.Error(w, "Erro ao criar requisição HTTP", http.StatusInternalServerError)
@@ -152,7 +160,7 @@ func handleRecognize(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Repassa a resposta diretamente para o Angular
+	// Pass-through: Devolve o JSON intacto da API externa direto para a renderização do cliente
 	w.Header().Set("Content-Type", "application/json")
 	io.Copy(w, resp.Body)
 }
@@ -161,5 +169,6 @@ func main() {
 	http.HandleFunc("/ws", handleConnections)
 	http.HandleFunc("/api/recognize", handleRecognize)
 	fmt.Println("Servidor Central iniciado na porta 8080...")
+	// Ponto de Entrada: Inicializa o servidor web atrelado à porta padrão de desenvolvimento
 	http.ListenAndServe(":8080", nil)
 }

@@ -1,5 +1,5 @@
 <main>
-  <h1>KARAOKE</h1>
+  <h1>DISCKARAOSHAZAM</h1>
   
   @if (papel === 'NENHUM') {
     <div class="search-area" style="text-align: center;">
@@ -19,8 +19,14 @@
           (click)="buscarMusicaShazam()" 
           [disabled]="estaReconhecendo"
           class="btn-shazam">
-          {{ estaReconhecendo ? 'Gravando e Analisando (10s)...' : 'Identificar Música no Ambiente' }}
+          {{ estaReconhecendo ? 'Gravando e Analisando (' + tempoRestante + 's)...' : 'Identificar Música no Ambiente' }}
         </button>
+
+        @if (mensagemLog) {
+          <div class="toast-log" [class]="mensagemLog.tipo">
+            {{ mensagemLog.texto }}
+          </div>
+        }
 
         @if (resultadoReconhecimento) {
           <div class="resultado-card">

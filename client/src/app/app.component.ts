@@ -7,8 +7,13 @@ import { AudioService } from './services/audio.service';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit, OnDestroy {
+  // Controle de Estado: Define o comportamento e as permissões do terminal na topologia da rede
   papel: 'NENHUM' | 'RESULTADO' | 'MICROFONE' = 'NENHUM';
   estadoSala: 'AGUARDANDO' | 'TOCANDO' = 'AGUARDANDO';
+
+  // Controle de UX e Feedback Visual
+  tempoRestante: number = 10;
+  mensagemLog: { texto: string, tipo: 'erro' | 'sucesso' | 'info' } | null = null;
 
   musicasFiltradas: string[] = [];
   musicaSelecionada: string = '';
@@ -16,6 +21,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   volumeMusica: number = 0.2; 
   volumeVoz: number = 1.0;    
+  
+  // Master Clock: Elemento nativo isolado para reproduzir a base estática sem sofrer Jitter da rede
   audioPlayer: HTMLAudioElement = new Audio();
 
   resultadoReconhecimento: any = null;
@@ -24,6 +31,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(private audioService: AudioService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
+    // Listener Principal: Ouve os broadcasts do servidor Go para sincronizar o estado da sala
     this.audioService.onComandoRecebido = (comando) => {
       console.log("Comando do Servidor:", comando);
       
@@ -31,21 +39,27 @@ export class AppComponent implements OnInit, OnDestroy {
         this.estadoSala = 'TOCANDO';
         this.musicaSelecionada = comando.musica;
         
-        // Agora todos (TV e Celular) tentam tocar de forma segura
-        this.tocarMP3();
+        if (this.papel === 'RESULTADO') {
+          // Compensação de Latência: Atrasamos a base local em 500ms para aguardar a viagem do pacote TCP da voz
+          setTimeout(() => {
+            this.tocarMP3();
+          }, 500); 
+        } else {
+          // Sincronia de Origem: O nó transmissor (Microfone) inicia a base no "tempo zero"
+          this.tocarMP3();
+        }
 
       } else if (comando.tipo === 'COMANDO_STOP' || (comando.tipo === 'SALA_ESTADO' && !comando.tocando)) {
         this.estadoSala = 'AGUARDANDO';
         this.musicaSelecionada = '';
         
-        // Se este aparelho era um microfone, remove ele da gravação
-        // Assim, na próxima música, ele volta para a fase de "entrar na música"
+        // Liberação de Hardware: Desliga o microfone imediatamente para economizar banda
         if (this.papel === 'MICROFONE') {
           this.audioService.desligarMicrofone();
           this.nomeParticipante = ''; 
         }
         
-        // Pausa a música
+        // Interrupção do Master Clock
         this.audioPlayer.pause();
         this.audioPlayer.currentTime = 0;
       }
@@ -54,33 +68,60 @@ export class AppComponent implements OnInit, OnDestroy {
     };
   }
 
+  // Sistema de Log Não-Bloqueante: Substitui interrupções de thread (alerts) por componentes reativos
+  mostrarLog(texto: string, tipo: 'erro' | 'sucesso' | 'info' = 'info') {
+    this.mensagemLog = { texto, tipo };
+    this.cdr.detectChanges();
+    
+    // Auto-limpeza: O toast desaparece automaticamente após 4 segundos
+    setTimeout(() => {
+      this.mensagemLog = null;
+      this.cdr.detectChanges();
+    }, 4000);
+  }
+
+  // Paradigma Transacional: Fluxo HTTP para gravação em bloco, consumo de API e temporizador reativo
   async buscarMusicaShazam() {
     this.estaReconhecendo = true;
     this.resultadoReconhecimento = null;
+    this.tempoRestante = 10; 
+
+    // Relógio de Interface: Contagem regressiva independente da thread de rede
+    const intervalo = setInterval(() => {
+      this.tempoRestante--;
+      this.cdr.detectChanges();
+      if (this.tempoRestante <= 0) {
+        clearInterval(intervalo);
+      }
+    }, 1000);
 
     try {
       const resposta = await this.audioService.reconhecerMusica();
       
+      // Parse de Metadados: Renderiza a resposta do Proxy Go
       if (resposta && resposta.status === 'success' && resposta.result) {
         this.resultadoReconhecimento = resposta.result;
+        this.mostrarLog("Música identificada com sucesso!", 'sucesso');
       } else {
-        alert("Não foi possível identificar a música. Tente chegar mais perto do microfone ou aumente o volume.");
+        this.mostrarLog("Não foi possível identificar a música. Tente chegar mais perto.", 'erro');
       }
     } catch (erro) {
-      alert("Erro ao conectar com o servidor para identificação.");
+      this.mostrarLog("Erro ao conectar com o servidor para identificação.", 'erro');
     } finally {
       this.estaReconhecendo = false;
+      clearInterval(intervalo); 
     }
   }
 
   async definirComoResultado() {
     this.papel = 'RESULTADO';
+    // Inicializa o nó receptor: Abre o motor de áudio e aguarda os pacotes via TCP
     await this.audioService.iniciarComoResultado();
   }
 
   async definirComoMicrofone() {
     this.papel = 'MICROFONE';
-    // O celular conecta na sala só para ver o status, NÃO abre a gravação de voz ainda
+    // Conexão Passiva: Estabelece o túnel WebSocket apenas para monitorar o estado da sala
     await this.audioService.conectarApenasServidor();
   }
 
@@ -104,43 +145,47 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async iniciarMusica(nome: string) {
+    // Validação de Estado utilizando o novo sistema de logs visuais
     if (!this.musicaSelecionada) {
-      alert('Selecione uma música!');
+      this.mostrarLog('Selecione uma música antes de iniciar!', 'erro');
       return;
     }
     if (nome.trim() === '') {
-      alert('Digite o seu nome!');
+      this.mostrarLog('Digite o seu nome para assumir o microfone!', 'erro');
       return;
     }
     this.nomeParticipante = nome;
     
-    // O microfone só acende a luz vermelha de gravação exatamente neste momento
+    // Gatilho de Streaming: Aciona a captura de hardware estritamente no momento do uso
     await this.audioService.ligarMicrofone();
     
     this.estadoSala = 'TOCANDO';
+    // Broadcast de Controle: Avisa a rede para iniciar a execução da base musical
     this.audioService.enviarComando({ tipo: 'COMANDO_PLAY', musica: this.musicaSelecionada });
   }
 
   async juntarSeAMusicaExistente(nome: string) {
     if (nome.trim() === '') {
-      alert('Digite o seu nome!');
+      this.mostrarLog('Digite o seu nome para entrar na música!', 'erro');
       return;
     }
     this.nomeParticipante = nome;
-    // O microfone secundário ativa a gravação para participar
+    // Concorrência: Injeta um novo fluxo de voz na sessão TCP que já está ativa
     await this.audioService.ligarMicrofone();
   }
 
   pararMusica() {
+    // Propaga o sinal de interrupção pela rede para sincronizar a parada de todos os nós
     this.audioService.enviarComando({ tipo: 'COMANDO_STOP' });
   }
 
   tocarMP3() {
+    // Execução Isolada: A base musical não trafega pela rede para evitar gargalos de banda
     try {
       this.audioPlayer.src = `/musica.mp3`; 
       this.audioPlayer.volume = this.volumeMusica; 
       this.audioPlayer.load();
-      // O catch previne o erro silencioso se o arquivo falhar ou o navegador travar
+      // Tratamento de Exceção: Previne travamentos silenciosos por políticas de autoplay dos navegadores
       this.audioPlayer.play().catch(e => {
         console.warn("Áudio não reproduzido (bloqueio do navegador ou sem arquivo):", e);
       });
@@ -156,10 +201,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   mudarVolumeVoz(event: any) {
     this.volumeVoz = event.target.value;
+    // Modula a amplitude dos pacotes binários que chegam da rede pelo GainNode
     this.audioService.setVolumeVoz(this.volumeVoz);
   }
 
   voltarInicio() {
+    // Rotina de Limpeza (Cleanup): Desmonta conexões de rede e destrava o hardware local
     this.audioService.stop();
     this.audioPlayer.pause();
     this.papel = 'NENHUM';
@@ -168,6 +215,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Prevenção de Vazamento de Memória: Garante o fechamento das sessões
     this.voltarInicio();
   }
 }
