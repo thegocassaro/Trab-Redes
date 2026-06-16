@@ -28,13 +28,6 @@ venv/
 *.test
 *.out
 
-# Arquivos de Áudio (Testes e Gravações locais)
-*.wav
-*.mp3
-*.raw
-*.pcm
-/recordings/
-
 # IDEs
 .vscode/
 .idea/

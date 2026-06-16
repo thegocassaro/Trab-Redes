@@ -131,9 +131,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
     const bancoRemoto = [
-      'Parabéns Pra Você',
-      'Evidências - Chitãozinho & Xororó',
-      'Fogo e Paixão - Wando'
+      'Mulher de fases'
     ];
     this.musicasFiltradas = bancoRemoto.filter(m => m.toLowerCase().includes(termo.toLowerCase()));
   }
