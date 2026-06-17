@@ -12,9 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Upgrade de Transporte: Eleva a requisição HTTP inicial para um túnel TCP persistente bidirecional
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true }, // Contorna políticas estritas de CORS para desenvolvimento
+	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 type ComandoJSON struct {
@@ -23,28 +22,34 @@ type ComandoJSON struct {
 	Tocando bool   `json:"tocando"`
 }
 
-// Gerenciador de Estado Concorrente: Estrutura base para gerenciar múltiplos clientes simultâneos
+// Atualizamos o mapa para armazenar uma string (ID) e adicionamos um contador
 type ClientManager struct {
-	clients       map[*websocket.Conn]bool
-	mu            sync.Mutex // Prevenção de Race Conditions durante leitura/escrita no mapa
+	clients       map[*websocket.Conn]string
+	mu            sync.Mutex
 	musicaTocando bool
 	musicaAtual   string
+	contador      int 
 }
 
 var manager = ClientManager{
-	clients: make(map[*websocket.Conn]bool),
+	clients: make(map[*websocket.Conn]string),
 }
 
-func (cm *ClientManager) Register(conn *websocket.Conn) {
+// O método Register agora gera e retorna o ID único de 16 caracteres
+func (cm *ClientManager) Register(conn *websocket.Conn) string {
 	cm.mu.Lock()
-	cm.clients[conn] = true
+	defer cm.mu.Unlock() // Garante o destravamento automático do mutex
 
-	// Sincronização de Estado (Late Joiners): Atualiza o cliente recém-conectado sobre o status atual da sala
+	cm.contador++
+	id := fmt.Sprintf("user_%011d", cm.contador)
+	cm.clients[conn] = id
+
 	if cm.musicaTocando {
 		estado := ComandoJSON{Tipo: "SALA_ESTADO", Musica: cm.musicaAtual, Tocando: true}
 		conn.WriteJSON(estado)
 	}
-	cm.mu.Unlock()
+	
+	return id
 }
 
 func (cm *ClientManager) Unregister(conn *websocket.Conn) {
@@ -54,24 +59,22 @@ func (cm *ClientManager) Unregister(conn *websocket.Conn) {
 }
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
-	// Handshake: Executa a transição do protocolo HTTP para o WebSocket
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 	defer ws.Close()
 
-	manager.Register(ws)
+	// Captura o ID exclusivo desta conexão
+	clientID := manager.Register(ws)
 	defer manager.Unregister(ws)
 
-	// Event Loop: Mantém a Goroutine escutando os pacotes deste cliente específico
 	for {
 		messageType, payload, err := ws.ReadMessage()
 		if err != nil {
 			break
 		}
 
-		// Roteamento de Controle (Metadados): Processa comandos JSON de Play/Stop
 		if messageType == websocket.TextMessage {
 			var comando ComandoJSON
 			if err := json.Unmarshal(payload, &comando); err == nil {
@@ -84,7 +87,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 					manager.musicaAtual = ""
 				}
 
-				// Sincronização em Massa: Dispara o novo estado para toda a rede conectada
 				for client := range manager.clients {
 					client.WriteJSON(comando)
 				}
@@ -92,13 +94,16 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Relay de Streaming (Voz): Roteador central de áudio de baixíssima latência
 		if messageType == websocket.BinaryMessage {
+			// Anexa o ID (16 bytes) na frente do pacote de áudio
+			idBytes := []byte(clientID)
+			pacoteAssinado := append(idBytes, payload...)
+
 			manager.mu.Lock()
 			for client := range manager.clients {
-				// Broadcast Seletivo: Repassa o buffer TCP para todos, exceto a origem (evita loop de eco)
 				if client != ws {
-					client.WriteMessage(websocket.BinaryMessage, payload)
+					// Envia o pacote com a assinatura
+					client.WriteMessage(websocket.BinaryMessage, pacoteAssinado)
 				}
 			}
 			manager.mu.Unlock()

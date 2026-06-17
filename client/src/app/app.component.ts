@@ -43,7 +43,7 @@ export class AppComponent implements OnInit, OnDestroy {
           // Compensação de Latência: Atrasamos a base local em 500ms para aguardar a viagem do pacote TCP da voz
           setTimeout(() => {
             this.tocarMP3();
-          }, 500); 
+          }, 800); 
         } else {
           // Sincronia de Origem: O nó transmissor (Microfone) inicia a base no "tempo zero"
           this.tocarMP3();

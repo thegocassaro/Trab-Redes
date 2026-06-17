@@ -10,7 +10,7 @@ export class AudioService {
   private workletNode?: AudioWorkletNode;
   private gainNode?: GainNode; 
   private ws?: WebSocket;
-
+  private clientNodes: Map<string, AudioWorkletNode> = new Map();
   public onComandoRecebido: (comando: any) => void = () => {};
 
   // Injeta o módulo HTTP para transações REST da API de reconhecimento
@@ -45,49 +45,61 @@ export class AudioService {
   }
 
   async iniciarComoResultado() {
-    // Configura o terminal atual como Receptor Master (Caixa de Som)
     await this.conectarWebSocket();
     
-    this.ws!.onmessage = (event) => {
-      // Diferencia pacotes de controle (String) de streaming de áudio (Binário)
-      if (typeof event.data === 'string') {
-        this.onComandoRecebido(JSON.parse(event.data));
-        return;
-      }
-
-      // Converte o pacote Int16 da rede de volta para Float32 para o AudioNode
-      if (event.data instanceof ArrayBuffer && this.workletNode) {
-        const pcm16 = new Int16Array(event.data);
-        const float32 = new Float32Array(pcm16.length);
-        for (let i = 0; i < pcm16.length; i++) {
-          float32[i] = pcm16[i] < 0 ? pcm16[i] / 0x8000 : pcm16[i] / 0x7FFF;
-        }
-        // Envia o pacote convertido para o Jitter Buffer do AudioWorklet
-        this.workletNode.port.postMessage(float32);
-      }
-    };
-
+    // Inicializa o contexto principal e o controle de volume master primeiro
     try {
-      // Instancia o motor de áudio focando na taxa de amostragem equilibrada
       this.audioContext = new AudioContext({ sampleRate: 24000 });
       await this.audioContext.audioWorklet.addModule('/audio-processor.js');
       
-      this.workletNode = new AudioWorkletNode(this.audioContext, 'audio-processor');
       this.gainNode = this.audioContext.createGain();
       this.gainNode.gain.value = 1.0;
-
-      // Conecta o buffer processado à saída física de som da máquina
-      this.workletNode.connect(this.gainNode);
       this.gainNode.connect(this.audioContext.destination);
       
-      // Contorna bloqueios de segurança de autoplay dos navegadores
       if (this.audioContext.state === 'suspended') {
          await this.audioContext.resume();
       }
       console.log("Aba de Resultado ativa e ouvindo.");
     } catch (e) {
       console.error("Erro ao iniciar o motor de áudio:", e);
+      return;
     }
+
+    this.ws!.onmessage = (event) => {
+      if (typeof event.data === 'string') {
+        this.onComandoRecebido(JSON.parse(event.data));
+        return;
+      }
+
+      if (event.data instanceof ArrayBuffer && this.audioContext) {
+        const arrayBuffer = event.data;
+
+        // Separa os 16 bytes do cabeçalho de identificação
+        const idBytes = arrayBuffer.slice(0, 16);
+        const audioBytes = arrayBuffer.slice(16);
+
+        // Descompacta a string de ID para descobrir quem está cantando
+        const clientId = new TextDecoder().decode(idBytes);
+
+        // Se é uma voz nova, alocamos um novo canal na nossa mesa de som
+        if (!this.clientNodes.has(clientId)) {
+          const newClientWorklet = new AudioWorkletNode(this.audioContext, 'audio-processor');
+          newClientWorklet.connect(this.gainNode!);
+          this.clientNodes.set(clientId, newClientWorklet);
+        }
+
+        const clientWorklet = this.clientNodes.get(clientId)!;
+
+        // Processa o áudio binário especificamente para o canal isolado
+        const pcm16 = new Int16Array(audioBytes);
+        const float32 = new Float32Array(pcm16.length);
+        for (let i = 0; i < pcm16.length; i++) {
+          float32[i] = pcm16[i] < 0 ? pcm16[i] / 0x8000 : pcm16[i] / 0x7FFF;
+        }
+        
+        clientWorklet.port.postMessage(float32);
+      }
+    };
   }
 
   async conectarApenasServidor() {
@@ -161,7 +173,6 @@ export class AudioService {
   }
 
   stop() {
-    // Derruba a camada de transporte e a captação
     this.desligarMicrofone();
     if (this.ws) {
       this.ws.close();
@@ -171,6 +182,10 @@ export class AudioService {
       this.gainNode.disconnect();
       this.gainNode = undefined;
     }
+    
+    // Limpeza de Hardware: Mata todos os workers de áudio de terceiros
+    this.clientNodes.forEach(node => node.disconnect());
+    this.clientNodes.clear();
   }
 
   reconhecerMusica(): Promise<any> {
